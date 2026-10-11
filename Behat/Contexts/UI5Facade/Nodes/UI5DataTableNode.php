@@ -187,8 +187,12 @@ class UI5DataTableNode extends UI5DataNode
         );
         foreach ($uniqueHeaders as $cell) {
             $label = $cell->find('css', 'label') ?? $cell;
+            $caption = trim($label->getText());
+            if ($caption === '') {
+                $caption = $this->extractIconText($cell);
+            }
             $columns[] = [
-                'caption' => trim($label->getText()),
+                'caption' => $caption,
                 'index'   => count($columns),
                 'colId'   => $cell->getAttribute('data-sap-ui-colid'),
                 'visible' => $cell->isVisible(),
@@ -202,8 +206,12 @@ class UI5DataTableNode extends UI5DataNode
         // sap.m.Table (responsive list): headers already sit in visual order and carry no
         // data-sap-ui-colid, so the index is the DOM position and the cell lookup is index-based.
         foreach ($this->getNodeElement()->findAll('css', '.sapMListTblHeader .sapMColumnHeader') as $header) {
+            $caption = trim($header->getText());
+            if ($caption === '') {
+                $caption = $this->extractIconText($header);
+            }
             $columns[] = [
-                'caption' => trim($header->getText()),
+                'caption' => $caption,
                 'index'   => count($columns),
                 'colId'   => null,
                 'visible' => $header->isVisible(),
@@ -2737,11 +2745,50 @@ JS
             return trim(implode(' ', $parts));
         }
 
+        // 3) Icon-only cells: use the icon's tooltip/label, which is what the user sees on hover
+        $iconText = $this->extractIconText($cell);
+        if ($iconText !== '') {
+            return $iconText;
+        }
+
         // Fallback: strip inner HTML (helps with &nbsp;)
         $html = $cell->getHtml();
         $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $html = str_replace("\xc2\xa0", ' ', $html);
         $text = trim(preg_replace('/\s+/u', ' ', strip_tags($html)));
         return $text;
+    }
+
+    /**
+     * Returns the hover text of sap.ui.core.Icon elements inside the given element (or '' if none).
+     *
+     * The label lives in hidden elements (.sapUiInvisibleText, .sapUiIconTitle[title]), which
+     * getText() ignores, so the markup/attributes are read directly.
+     */
+    private function extractIconText(NodeElement $element): string
+    {
+        $icons = $element->findAll('css', '.sapUiIcon');
+        if (empty($icons) && str_contains(' ' . (string) $element->getAttribute('class') . ' ', ' sapUiIcon ')) {
+            $icons = [$element];
+        }
+
+        $parts = [];
+        foreach ($icons as $icon) {
+            $text = '';
+            if ($invisible = $icon->find('css', '.sapUiInvisibleText')) {
+                $text = html_entity_decode(strip_tags($invisible->getHtml()), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            if (trim($text) === '' && $iconTitle = $icon->find('css', '.sapUiIconTitle[title]')) {
+                $text = (string) $iconTitle->getAttribute('title');
+            }
+            if (trim($text) === '') {
+                $text = (string) ($icon->getAttribute('title') ?? $icon->getAttribute('aria-label'));
+            }
+            $text = trim(preg_replace('/\s+/u', ' ', str_replace("\xc2\xa0", ' ', $text)));
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+        }
+        return implode(' ', $parts);
     }
 }
