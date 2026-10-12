@@ -3395,7 +3395,10 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         $logbook->setIndentActive(1);
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->itWorksAsShown($fields, $logbook);
-        Assert::assertNotTrue($result->isFailed(), 'Widget "' . ($node->getCaption() ?? $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        // Assert::fail() instead of assertNotTrue(): the latter exports values via PHPUnit's config registry, which is not initialized under Behat
+        if ($result->isFailed()) {
+            Assert::fail('Widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        }
     }
 
     /**
@@ -3425,7 +3428,9 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->checkWorksAsExpected($logbook);
         $title = $node->getCaption() === null ||  $node->getCaption() === "" ? $node->getWidgetType() : $node->getCaption();
-        Assert::assertNotTrue($result->isFailed(), 'Widget "' . $title . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        if ($result->isFailed()) {
+            Assert::fail('Widget "' . $title . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        }
     }
 
     /**
@@ -3458,7 +3463,9 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         $logbook->setIndentActive(1);
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->checkFiltersWorkAsExpected($logbook);
-        Assert::assertNotTrue($result->isFailed(), 'Filters of widget "' . ($node->getCaption() ?? $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        if ($result->isFailed()) {
+            Assert::fail('Filters of widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        }
     }
 
     /**
@@ -3497,7 +3504,9 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
         $logbook->setIndentActive(1);
         DatabaseFormatter::addTestLogbook($logbook);
         $result = $node->checkButtonsWorkAsExpectedOnly($logbook);
-        Assert::assertNotTrue($result->isFailed(), 'Buttons of widget "' . ($node->getCaption() ?? $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        if ($result->isFailed()) {
+            Assert::fail('Buttons of widget "' . ($node->getCaption() ?: $node->getWidgetType()) . '" did not work as expected: ' . ($result->getException()?->getMessage() ?? 'see substeps for details'));
+        }
     }
 
     /**
