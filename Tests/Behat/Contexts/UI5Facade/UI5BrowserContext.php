@@ -1095,6 +1095,68 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
     }
 
     /**
+     * Searches the focused table through a column's header filter instead of a toolbar filter.
+     *
+     * Focus a table first (e.g. "I look at table 1"). The column caption identifies the header
+     * whose filter is applied; browser interaction stays in the table node so both explicit
+     * scenarios and automatic column checks use the same filtering behavior.
+     *
+     * @When I enter :value into the filter for column :column
+     *
+     * @param string $value The value to search for
+     * @param string $column The visible column caption
+     */
+    public function iEnterIntoTheFilterForColumn(string $value, string $column): void
+    {
+        $this->getFocusedDataTableNode()->filterColumn($column, $value);
+    }
+
+    /**
+     * Removes a column's header filter so later steps can search without that restriction.
+     *
+     * Focus the target table first (e.g. "I look at table 1"). Other column filters remain unchanged.
+     *
+     * @When I reset the filter for column :column
+     *
+     * @param string $column The visible column caption
+     */
+    public function iResetTheFilterForColumn(string $column): void
+    {
+        $this->getFocusedDataTableNode()->resetFilterColumn($column);
+    }
+
+    /**
+     * Sorts the focused table through its column header so scenarios can control result order.
+     *
+     * Focus the target table first (e.g. "I look at table 1").
+     *
+     * @When I sort column :column in :direction order
+     *
+     * @param string $column The visible column caption
+     * @param string $direction ascending or descending
+     */
+    public function iSortColumnInOrder(string $column, string $direction): void
+    {
+        $this->getFocusedDataTableNode()->getColumnByCaption($column)->sort($direction);
+    }
+
+    /**
+     * Checks displayed column values so a sort indicator alone cannot make a broken sort pass.
+     *
+     * Checks rendered rows, not unloaded pages. Numeric values are compared numerically;
+     * other displayed values are compared as case-insensitive text.
+     *
+     * @Then the values in column :column are sorted in :direction order
+     *
+     * @param string $column The visible column caption
+     * @param string $direction ascending or descending
+     */
+    public function theValuesInColumnAreSortedInOrder(string $column, string $direction): void
+    {
+        $this->getFocusedDataTableNode()->assertColumnValuesSorted($column, $direction);
+    }
+
+    /**
      * Checks that a given text appears in a named column of the table you are looking at.
      *
      * Use this after searching or filtering to confirm the results contain what you expect.
