@@ -11,6 +11,8 @@ use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5DataCardsNode;
 use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5ContainerNode;
 use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5DataNode;
 use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5DataSpreadSheetNode;
+use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5DialogNode;
+use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5DisplayNode;
 use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5FilterNode;
 use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5InputNode;
 use axenox\BDT\Behat\Contexts\UI5Facade\Nodes\UI5MenuButtonNode;
@@ -993,6 +995,57 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
     }
 
     /**
+     * Verifies a field's visible value without accidentally matching fields behind the focused dialog.
+     *
+     * Omit the type for Display fields, or specify Display, Input, InputDate or InputText to
+     * select the appropriate value-reading node. Dialog header fields are included.
+     *
+     * Usage examples:
+     *
+     *   Then I see 1 widget of type "Dialog"
+     *   And I see "TESTING" in the "Name" field
+     *   And I see "TESTING" in the "Name" field of type "Display"
+     *   And I see "John" in the "First name" field of type "Input"
+     *   And I see "01.10.2026" in the "Start Date" field of type "InputDate"
+     *   And I see "abc" in the "Description" field of type "InputText"
+     *
+     * @Then I see ":text" in the ":caption" field
+     * @Then I see ":text" in the ":caption" field of type ":type"
+     *
+     * @param string $text Expected displayed text
+     * @param string $caption Caption of the field
+     * @param string $type Widget type; defaults to Display for existing scenarios
+     */
+    public function iSeeTextInField(string $text, string $caption, string $type = 'Display'): void
+    {
+        $dialog = $this->getBrowser()->getFocusedNode();
+        Assert::assertInstanceOf(
+            UI5DialogNode::class,
+            $dialog,
+            'No dialog is currently focused. Focus a dialog before checking its fields.'
+        );
+        switch ($type) {
+            case 'Display':
+                $field = UI5DisplayNode::findByCaption($dialog, $caption);
+                break;
+            case 'Input':
+            case 'InputDate':
+            case 'InputText':
+                $field = UI5InputNode::findByCaption($dialog, $caption, $type);
+                break;
+            default:
+                throw new RuntimeException('Unsupported field type "' . $type . '": expected Display, Input, InputDate or InputText.');
+        }
+        Assert::assertNotNull($field, 'Cannot find field "' . $caption . '" of type "' . $type . '" in the focused dialog.');
+        $this->getBrowser()->highlightWidget($field->getNodeElement(), $type, 0);
+        Assert::assertSame(
+            $text,
+            $field->getValueVisible(),
+            'Unexpected text in field "' . $caption . '" of type "' . $type . '" in the focused dialog.'
+        );
+    }
+
+    /**
      * Checks that the widget you are looking at(focused) offers a given set of filters.
      *
      * Filters are the search fields above a table or list that let a user narrow down the data.
@@ -1101,6 +1154,12 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      * whose filter is applied; browser interaction stays in the table node so both explicit
      * scenarios and automatic column checks use the same filtering behavior.
      *
+     * Usage example:
+     *
+     *   When I look at table 1
+     *   And I enter "Berlin" into the filter for column "City"
+     *   Then I see "Berlin" in column "City"
+     *
      * @When I enter :value into the filter for column :column
      *
      * @param string $value The value to search for
@@ -1116,6 +1175,12 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      *
      * Focus the target table first (e.g. "I look at table 1"). Other column filters remain unchanged.
      *
+     * Usage example:
+     *
+     *   When I look at table 1
+     *   And I enter "Berlin" into the filter for column "City"
+     *   And I reset the filter for column "City"
+     *
      * @When I reset the filter for column :column
      *
      * @param string $column The visible column caption
@@ -1129,6 +1194,12 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      * Sorts the focused table through its column header so scenarios can control result order.
      *
      * Focus the target table first (e.g. "I look at table 1").
+     *
+     * Usage examples:
+     *
+     *   When I look at table 1
+     *   And I sort column "Name" in "ascending" order
+     *   And I sort column "Name" in "descending" order
      *
      * @When I sort column :column in :direction order
      *
@@ -1145,6 +1216,12 @@ class UI5BrowserContext extends BehatFormatterContext implements Context
      *
      * Checks rendered rows, not unloaded pages. Numeric values are compared numerically;
      * other displayed values are compared as case-insensitive text.
+     *
+     * Usage example:
+     *
+     *   When I look at table 1
+     *   And I sort column "Name" in "ascending" order
+     *   Then the values in column "Name" are sorted in "ascending" order
      *
      * @Then the values in column :column are sorted in :direction order
      *
